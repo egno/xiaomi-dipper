@@ -1,0 +1,12 @@
+[Unit]
+Description=Qualcomm IPA firmware loader
+After=mount-android.service
+ConditionPathExists=/dev/ipa
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'while ! mountpoint -q /vendor; do sleep 1; done; if [ -f /vendor/firmware/ipa_fws.mdt ]; then echo 1 > /dev/ipa; fi'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
