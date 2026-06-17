@@ -1,0 +1,14 @@
+[Unit]
+Description=dipper debug ADB gadget (early, bypasses usb-moded)
+DefaultDependencies=no
+After=systemd-udevd.service
+Before=sysinit.target
+Conflicts=usb-moded.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/dipper-debug-usb
+
+[Install]
+WantedBy=sysinit.target
