@@ -1,0 +1,27 @@
+#!/bin/sh
+# DEBUG ONLY: capture Android-container graphics logs (logcat/gralloc/hwcomposer)
+# to persistent userdata so a failed graphical boot can be diagnosed from recovery.
+# The compositor's dequeueBuffer failures originate in the Android HALs, whose logs
+# go to Android logd (not journald) - this bridges that gap.
+OUT=/userdata/focal-debug
+mkdir -p "$OUT" 2>/dev/null
+exec >>"$OUT/run.log" 2>&1
+echo "=== dipper-focal-debug start $(date -u) uptime=$(cat /proc/uptime) ==="
+
+# Give the container + compositor time to start and fail a few cycles.
+sleep 45
+
+dump() { echo "----- $1 -----"; }
+
+{
+  dump "host dmesg"; dmesg 2>/dev/null | tail -300
+  dump "container logcat -d"; lxc-attach -n android -- /system/bin/logcat -d 2>/dev/null | tail -1500
+  dump "container getprop"; lxc-attach -n android -- /system/bin/getprop 2>/dev/null
+  dump "container ps"; lxc-attach -n android -- /system/bin/ps -A 2>/dev/null
+  dump "host: graphics services"; systemctl --no-pager status lightdm unity-system-compositor 2>/dev/null | head -60
+  dump "test_hwcomposer"; EGL_PLATFORM=hwcomposer timeout 15 test_hwcomposer 2>&1 | head -80
+} > "$OUT/graphics-$(date -u +%H%M%S).txt" 2>&1
+
+cp /var/log/lightdm/unity-system-compositor.log "$OUT/usc.log" 2>/dev/null
+echo "=== dipper-focal-debug done $(date -u) ==="
+exit 0

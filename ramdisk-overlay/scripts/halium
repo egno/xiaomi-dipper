@@ -23,65 +23,6 @@ halium_panic() {
 	panic $REASON
 }
 
-dipper_debug_net() {
-	# DEBUG ONLY: bring up a USB network gadget + telnetd early and
-	# unconditionally so we can shell into the initramfs over USB even if
-	# the boot hangs later. Uses CDC-ECM/NCM (works natively on macOS) with
-	# an RNDIS fallback. Telnet to 192.168.2.15 once the host gets a DHCP
-	# lease (server hands out 192.168.2.20-90).
-	tell_kmsg "dipper-debug-net: starting"
-	(
-	CONFIGFS=/config
-	GADGET=$CONFIGFS/usb_gadget/g1
-	mkdir -p $CONFIGFS 2>/dev/null
-	mountpoint -q $CONFIGFS 2>/dev/null || mount -t configfs none $CONFIGFS 2>/dev/null
-
-	i=0
-	while [ -z "$(ls /sys/class/udc 2>/dev/null)" ]; do
-		i=$((i + 1)); [ $i -ge 20 ] && break; sleep 1
-	done
-	UDC=$(ls /sys/class/udc 2>/dev/null | head -n1)
-
-	mkdir -p $GADGET 2>/dev/null
-	echo 0x18d1 > $GADGET/idVendor 2>/dev/null
-	echo 0xd001 > $GADGET/idProduct 2>/dev/null
-	mkdir -p $GADGET/strings/0x409 2>/dev/null
-	echo dipper > $GADGET/strings/0x409/serialnumber 2>/dev/null
-	echo "Halium initrd" > $GADGET/strings/0x409/manufacturer 2>/dev/null
-	echo "dipper debug" > $GADGET/strings/0x409/product 2>/dev/null
-	mkdir -p $GADGET/configs/c.1/strings/0x409 2>/dev/null
-	echo debug > $GADGET/configs/c.1/strings/0x409/configuration 2>/dev/null
-
-	FUNC=""
-	for f in ecm.usb0 ncm.usb0 rndis.usb0; do
-		if mkdir $GADGET/functions/$f 2>/dev/null; then FUNC=$f; break; fi
-	done
-	if [ -z "$FUNC" ]; then
-		tell_kmsg "dipper-debug-net: no usb-net gadget function available"
-		exit 0
-	fi
-	ln -s $GADGET/functions/$FUNC $GADGET/configs/c.1/ 2>/dev/null
-	echo "$UDC" > $GADGET/UDC 2>/dev/null
-
-	sleep 2
-	IFACE=""
-	for n in usb0 rndis0 eth0; do
-		if ifconfig $n 192.168.2.15 netmask 255.255.255.0 up 2>/dev/null; then IFACE=$n; break; fi
-	done
-	tell_kmsg "dipper-debug-net: func=$FUNC udc=$UDC iface=$IFACE"
-	if [ -z "$IFACE" ]; then
-		tell_kmsg "dipper-debug-net: failed to bring up an interface"
-		exit 0
-	fi
-
-	printf "start 192.168.2.20\nend 192.168.2.90\nlease_file /var/udhcpd.leases\ninterface %s\noption subnet 255.255.255.0\n" "$IFACE" > /etc/udhcpd.conf
-	touch /var/udhcpd.leases
-	/bin/busybox udhcpd /etc/udhcpd.conf 2>/dev/null
-	/bin/busybox telnetd -b 192.168.2.15:23 -l /bin/sh 2>/dev/null
-	tell_kmsg "dipper-debug-net: telnetd listening on 192.168.2.15:23 ($IFACE)"
-	) 2>/dev/null || true
-}
-
 identify_boot_mode() {
 	# Our current list of supported boot modes:
 	## BOOT_MODE = halium and android
@@ -454,20 +395,6 @@ mountroot() {
 
 	# Put all of this script's output into /dev/kmsg
 	exec &>/dev/kmsg
-
-	# DEBUG ONLY: expose a telnet shell over USB early so the boot can be
-	# inspected even if a later step hangs.
-	dipper_debug_net
-
-	# DEBUG ONLY: pause the boot here with telnet held open so there is
-	# unlimited time to connect and investigate. Resume with 'touch /continue'
-	# from the telnet shell, or wait out the timeout.
-	tell_kmsg "dipper-debug-net: PAUSING boot for up to 1200s (touch /continue to resume)"
-	i=0
-	while [ ! -e /continue ] && [ "$i" -lt 1200 ]; do
-		i=$((i + 1)); sleep 1
-	done
-	tell_kmsg "dipper-debug-net: resuming boot"
 
 	# Mount root
 	#
