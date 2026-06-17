@@ -459,6 +459,16 @@ mountroot() {
 	# inspected even if a later step hangs.
 	dipper_debug_net
 
+	# DEBUG ONLY: pause the boot here with telnet held open so there is
+	# unlimited time to connect and investigate. Resume with 'touch /continue'
+	# from the telnet shell, or wait out the timeout.
+	tell_kmsg "dipper-debug-net: PAUSING boot for up to 1200s (touch /continue to resume)"
+	i=0
+	while [ ! -e /continue ] && [ "$i" -lt 1200 ]; do
+		i=$((i + 1)); sleep 1
+	done
+	tell_kmsg "dipper-debug-net: resuming boot"
+
 	# Mount root
 	#
 	# Create a temporary mountpoint for the bindmount
