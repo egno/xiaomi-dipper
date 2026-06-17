@@ -1,11 +1,8 @@
 [Unit]
 Description=USB tethering
-After=network-online.target mount-android.service
-Wants=network-online.target
+After=mount-android.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/usb-tethering
-
-[Install]
-WantedBy=multi-user.target
+ExecStart=/bin/bash /usr/bin/usb-tethering
+Restart=on-failure

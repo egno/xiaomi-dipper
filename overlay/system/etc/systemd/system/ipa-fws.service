@@ -5,8 +5,5 @@ ConditionPathExists=/dev/ipa
 
 [Service]
 Type=oneshot
-ExecStart=/bin/sh -c 'while ! mountpoint -q /vendor; do sleep 1; done; if [ -f /vendor/firmware/ipa_fws.mdt ]; then echo 1 > /dev/ipa; fi'
+ExecStart=/bin/sh -c 'for i in $(seq 1 120); do for fw in /android/vendor/firmware/ipa_fws.mdt /vendor/firmware/ipa_fws.mdt; do if [ -f "$fw" ]; then echo 1 > /dev/ipa; exit 0; fi; done; sleep 1; done; exit 0'
 RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
