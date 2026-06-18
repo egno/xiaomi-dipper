@@ -22,6 +22,8 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
+      - uses: actions/checkout@v4
+
       - name: Enable arm64 emulation
         run: |
           sudo apt-get update
@@ -61,7 +63,7 @@ jobs:
 
           docker run --rm --platform linux/arm64 \
             -v "$PWD":/work -w /work arm64v8/ubuntu:focal \
-            bash -lc 'cp /work/build.sh /build.sh && cp /work/patches/mir-android2-egl-probe.patch /patches/mir-android2-egl-probe.patch && mkdir -p /out && bash /build.sh && cp /out/*.deb /work/ 2>/dev/null || true; ls -l /work/*.deb || true'
+            bash -lc 'cp /work/build.sh /build.sh && mkdir -p /out && bash /build.sh && cp /out/*.deb /work/ 2>/dev/null || true; ls -l /work/*.deb || true'
 
       - name: Extract graphics-android2.so from .deb
         run: |
