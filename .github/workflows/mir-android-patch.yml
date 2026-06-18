@@ -1,10 +1,10 @@
-name: mir-android-platform patch
+name: mir-android2-platform patch
 
-# Builds a patched mir-android-platform for dipper (Focal / Halium 9, arm64).
+# Builds a patched mir-android2-platform for dipper (Focal / Halium 9, arm64).
 #
 # Fix: the DeviceQuirks GPU-probe context (select_egl_config_with_any_format)
 # requests EGL_SURFACE_TYPE = EGL_WINDOW_BIT | EGL_PBUFFER_BIT. On sdm845 the
-# Lomiri greeter's mir-android server starts while the system compositor still
+# Lomiri greeter's mir-android2 server starts while the system compositor still
 # holds the only window-capable EGL config, so eglChooseConfig returns 0 and the
 # greeter dies ("could not select EGL config") -> lightdm respawn loop = screen
 # flicker. The probe only ever makes a PBUFFER surface, so EGL_WINDOW_BIT is
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get install -y qemu-user-static binfmt-support
           sudo update-binfmts --enable qemu-aarch64
 
-      - name: Build patched mir-android-platform in arm64 Focal chroot
+      - name: Build patched mir-android2-platform in arm64 Focal chroot
         run: |
           set -eux
           cat > build.sh <<'INNER'
@@ -42,8 +42,8 @@ jobs:
             wget -qO /etc/apt/trusted.gpg.d/ubports.gpg https://repo.ubports.com/keyring.gpg
           apt-get update
 
-          git clone --depth 1 -b ubports/focal_-_android9 \
-            https://gitlab.com/ubports/development/core/hybris-support/mir-android-platform.git src
+          git clone --depth 1 -b ubports/focal \
+            https://gitlab.com/ubports/development/core/hybris-support/mir-android2-platform.git src
           cd src
 
           # Patch ONLY the DeviceQuirks pbuffer probe (second occurrence).
@@ -63,16 +63,17 @@ jobs:
             -v "$PWD":/work -w /work arm64v8/ubuntu:focal \
             bash -lc 'cp /work/build.sh /build.sh && mkdir -p /out && bash /build.sh && cp /out/*.deb /work/ 2>/dev/null || true; ls -l /work/*.deb || true'
 
-      - name: Extract graphics platform .so from .deb
+      - name: Extract graphics-android2.so from .deb
         run: |
           set -eux
           mkdir -p out
-          for d in *.deb; do dpkg-deb -x "$d" extract || true; done
-          find extract -name 'graphics-android2.so*' -o -name '*android*.so*' | tee out/so-list.txt
-          find extract -name 'graphics-android2.so*' -exec cp {} out/ \; || true
-          cp *.deb out/ 2>/dev/null || true
+          for d in mir-platform-graphics-android2*.deb; do dpkg-deb -x "$d" extract || true; done
+          find extract -name 'graphics-android2.so*' | tee out/so-list.txt
+          find extract -name 'graphics-android2.so*' -exec cp {} out/ \;
+          cp mir-platform-graphics-android2*.deb out/ 2>/dev/null || true
+          test -f out/graphics-android2.so.15
 
       - uses: actions/upload-artifact@v4
         with:
-          name: mir-android-platform-patched
+          name: mir-android2-platform-patched
           path: out/
