@@ -16,6 +16,7 @@ on:
     branches: [ focal/port-bootstrap ]
     paths:
       - .github/workflows/mir-android-patch.yml
+      - patches/mir-android2-egl-probe.patch
 
 jobs:
   build:
@@ -34,7 +35,7 @@ jobs:
           set -eux
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y ca-certificates gnupg wget git devscripts equivs
+          apt-get install -y ca-certificates gnupg wget git devscripts equivs patch
 
           # UBports Focal repo provides the Mir/hybris dev packages.
           echo "deb http://repo.ubports.com/ focal main" > /etc/apt/sources.list.d/ubports.list
@@ -46,10 +47,9 @@ jobs:
             https://gitlab.com/ubports/development/core/hybris-support/mir-android2-platform.git src
           cd src
 
-          # Patch ONLY the DeviceQuirks pbuffer probe (second occurrence).
-          perl -0pi -e 's/(select_egl_config_with_any_format.*?EGL_SURFACE_TYPE,\s*)EGL_WINDOW_BIT \| EGL_PBUFFER_BIT/${1}EGL_PBUFFER_BIT/s' \
-            src/platforms/android/server/gl_context.cpp
-          grep -n "EGL_SURFACE_TYPE" src/platforms/android/server/gl_context.cpp
+          # Relax DeviceQuirks EGL probe: PBUFFER first, then any ES2 config.
+          patch -p1 < /work/patches/mir-android2-egl-probe.patch
+          grep -n "try_choose\|EGL_SURFACE_TYPE" src/platforms/android/server/gl_context.cpp
 
           # Install build deps and build the .deb set.
           mk-build-deps -i -r -t "apt-get -y --no-install-recommends" debian/control
@@ -61,7 +61,7 @@ jobs:
 
           docker run --rm --platform linux/arm64 \
             -v "$PWD":/work -w /work arm64v8/ubuntu:focal \
-            bash -lc 'cp /work/build.sh /build.sh && mkdir -p /out && bash /build.sh && cp /out/*.deb /work/ 2>/dev/null || true; ls -l /work/*.deb || true'
+            bash -lc 'cp /work/build.sh /build.sh && cp /work/patches/mir-android2-egl-probe.patch /patches/mir-android2-egl-probe.patch && mkdir -p /out && bash /build.sh && cp /out/*.deb /work/ 2>/dev/null || true; ls -l /work/*.deb || true'
 
       - name: Extract graphics-android2.so from .deb
         run: |
