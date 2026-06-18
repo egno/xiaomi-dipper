@@ -1,0 +1,35 @@
+#!/bin/sh -ef
+# Copyright (C) 2021 UBports Foundation
+# Dipper: when unity-system-compositor already owns EGL/HWC, do not start a
+# nested Mir server (select_egl_config_with_any_format fails on sdm845).
+
+export QML_NO_TOUCH_COMPRESSION=1
+export MIR_SERVER_ENABLE_MIRCLIENT=1
+export MIR_SERVER_PROMPT_FILE=1
+
+if [ -z "$XDG_RUNTIME_DIR" ]; then
+    XDG_RUNTIME_DIR=/run/user/$(id -u)
+    export XDG_RUNTIME_DIR
+fi
+
+export WAYLAND_DISPLAY=wayland-0
+export LOMIRI_AS_SYSTEMD_UNIT=1
+
+if [ -S /run/mir_socket ]; then
+    export MIR_SERVER_FILE=/run/mir_socket
+    export MIR_SOCKET=/run/mir_socket
+    export QT_QPA_PLATFORM=ubuntumirclient
+    dbus-update-activation-environment --systemd MIR_SOCKET=/run/mir_socket
+    dbus-update-activation-environment --systemd WAYLAND_DISPLAY
+    exec ${LOMIRI_BINARY:-lomiri} "$@"
+fi
+
+export MIR_SERVER_FILE="${XDG_RUNTIME_DIR}/mir_socket"
+rm -f "$MIR_SERVER_FILE"
+rm -f "${MIR_SERVER_FILE}_trusted"
+dbus-update-activation-environment --systemd MIR_SOCKET="${MIR_SERVER_FILE}"
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY
+export QT_QPA_PLATFORM=mirserver
+export MIR_SERVER_ENABLE_X11=1
+export MIR_SERVER_XWAYLAND_PATH=/usr/libexec/Xwayland.lomiri
+exec ${LOMIRI_BINARY:-lomiri} "$@"
