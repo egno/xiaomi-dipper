@@ -1,0 +1,33 @@
+#!/bin/sh
+# DEBUG: run Lomiri's shell as the SOLE hardware Mir compositor (no USC).
+# Mirrors unity-system-compositor's proven environment (which inits EGL fine as
+# the first/only client) but launches the shell instead, to test whether a
+# single EGL client works on dipper where the nested 2nd client cannot.
+exec >>/userdata/solo-shell.log 2>&1
+echo "=== dipper-shell start $(date -u) uptime=$(cat /proc/uptime 2>/dev/null) id=$(id) ==="
+
+# Proven-good bits copied from lsc-wrapper (the working USC launcher).
+[ -r /etc/environment ] && . /etc/environment
+export ANDROID_ROOT
+export LD_PRELOAD=libtls-padding.so
+export MIR_SERVER_ENABLE_MIRCLIENT=1
+
+# Own the hardware directly: sole Mir server, VT console, no host socket.
+export XDG_RUNTIME_DIR=/run
+export XDG_SESSION_TYPE=mir
+export QT_QPA_PLATFORM=mirserver
+export MIR_SERVER_FILE=/run/mir_socket
+export MIR_SERVER_CONSOLE_PROVIDER=vt
+export MIR_SERVER_VT=1
+export LOMIRI_AS_SYSTEMD_UNIT=1
+export GRID_UNIT_PX=21
+export QTWEBKIT_DPR=2.0
+export WAYLAND_DISPLAY=wayland-0
+# Verbose Mir logging so the EGL/platform path is captured.
+export MIR_SERVER_ENABLE_KEY_REPEAT=false
+
+rm -f /run/mir_socket /run/mir_socket_trusted 2>/dev/null
+
+echo "--- env ---"; env | grep -E "MIR_|QT_QPA|XDG_|LD_PRELOAD|ANDROID_ROOT" | sort
+echo "--- launching: dbus-run-session lomiri --mode=full-shell ---"
+exec dbus-run-session -- lomiri --mode=full-shell

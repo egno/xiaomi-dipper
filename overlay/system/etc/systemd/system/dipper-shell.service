@@ -1,0 +1,14 @@
+[Unit]
+Description=DEBUG: Dipper standalone Lomiri shell (single EGL client test)
+After=mount-android.service start-android-container.service multi-user.target
+Wants=mount-android.service
+Conflicts=lightdm.service
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/dipper-shell
+Restart=no
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

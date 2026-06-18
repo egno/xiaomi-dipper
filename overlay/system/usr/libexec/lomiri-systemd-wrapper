@@ -1,7 +1,18 @@
 #!/bin/sh -ef
 # Copyright (C) 2021 UBports Foundation
 # Dipper: nest Lomiri's Mir server on unity-system-compositor instead of
-# grabbing a second standalone EGL stack (select_egl_config fails on sdm845).
+# opening a second Android-EGL stack (select_egl_config fails on sdm845).
+# Diagnostics go to stdout -> the lomiri-full-greeter.service journal.
+
+echo "DIPPER-WRAP: start uid=$(id -u) XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-unset} args=$*"
+echo "DIPPER-WRAP: pre MIR_SERVER_HOST_SOCKET=${MIR_SERVER_HOST_SOCKET:-unset} MIR_SOCKET=${MIR_SOCKET:-unset}"
+for s in /run/mir_socket /run/lightdm/mir_socket "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/mir_socket"; do
+    if [ -e "$s" ]; then
+        echo "DIPPER-WRAP: socket present: $(ls -ld "$s" 2>&1)"
+    else
+        echo "DIPPER-WRAP: socket absent: $s"
+    fi
+done
 
 export QML_NO_TOUCH_COMPRESSION=1
 export MIR_SERVER_ENABLE_MIRCLIENT=1
@@ -22,9 +33,17 @@ export LOMIRI_AS_SYSTEMD_UNIT=1
 export MIR_SERVER_ENABLE_X11=1
 export MIR_SERVER_XWAYLAND_PATH=/usr/libexec/Xwayland.lomiri
 
-if [ -S /run/mir_socket ]; then
-    export MIR_SERVER_HOST_SOCKET=/run/mir_socket
+# Nest on USC's compositor socket so the inner server uses Mir's nested
+# graphics platform instead of grabbing the Android EGL display.
+if [ -z "${MIR_SERVER_HOST_SOCKET:-}" ]; then
+    for s in /run/mir_socket /run/lightdm/mir_socket; do
+        if [ -e "$s" ]; then
+            export MIR_SERVER_HOST_SOCKET="$s"
+            break
+        fi
+    done
 fi
+echo "DIPPER-WRAP: using MIR_SERVER_HOST_SOCKET=${MIR_SERVER_HOST_SOCKET:-NONE}"
 
 dbus-update-activation-environment --systemd MIR_SOCKET="${MIR_SERVER_FILE}"
 dbus-update-activation-environment --systemd WAYLAND_DISPLAY
