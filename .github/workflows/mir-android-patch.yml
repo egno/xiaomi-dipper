@@ -9,6 +9,10 @@ name: mir-android2-platform patch
 # greeter dies ("could not select EGL config") -> lightdm respawn loop = screen
 # flicker. The probe only ever makes a PBUFFER surface, so EGL_WINDOW_BIT is
 # unnecessary; dropping it lets the probe succeed alongside the compositor.
+#
+# Fix 2: HwcPlatform::create_display() ignored the initial display
+# configuration policy, so with Lomiri as the sole compositor the output scale
+# stayed 1 and the UI rendered at the toolkit's 8px default grid unit.
 
 on:
   workflow_dispatch:
@@ -16,7 +20,7 @@ on:
     branches: [ focal/port-bootstrap ]
     paths:
       - .github/workflows/mir-android-patch.yml
-      - patches/mir-android2-egl-probe.patch
+      - patches/mir-android2-*.patch
 
 jobs:
   build:
@@ -52,6 +56,11 @@ jobs:
           # Relax DeviceQuirks EGL probe: PBUFFER first, then any ES2 config.
           patch -p1 < /work/patches/mir-android2-egl-probe.patch
           grep -n "try_choose\|EGL_SURFACE_TYPE" src/platforms/android/server/gl_context.cpp
+
+          # Apply the initial display configuration policy in create_display()
+          # (output scale / form factor from qtmir's GRID_UNIT_PX policy).
+          patch -p1 < /work/patches/mir-android2-initial-display-policy.patch
+          grep -n "initial_conf_policy->apply_to" src/platforms/android/server/platform.cpp
 
           # Install build deps and build the .deb set.
           mk-build-deps -i -r -t "apt-get -y --no-install-recommends" debian/control
