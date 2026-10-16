@@ -36,9 +36,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Without `name`, v4 extracts into out/<artifact-name>/ and the device
+      # tarball is silently skipped (cp fails, "Skipping missing file"), giving
+      # a system.img with no /opt/halium-overlay at all.
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
+          name: artifact
           path: out
 
       - name: Build focal flashable images
@@ -49,7 +53,9 @@ jobs:
             https://gitlab.com/ubports/porting/community-ports/halium-generic-adaptation-build-tools.git \
             build
           DEVICE="$(source deviceinfo && echo $deviceinfo_codename)"
+          test -f "out/device_${DEVICE}.tar.xz" || { ls -laR out; echo "device tarball missing"; exit 1; }
           ./build/prepare-fake-ota.sh "out/device_${DEVICE}.tar.xz" ota
+          test -f "ota/device_${DEVICE}.tar.xz" || { echo "device tarball not staged into OTA"; exit 1; }
           ./build/system-image-from-ota.sh ota/ubuntu_command out
 
       - uses: actions/upload-artifact@v4
