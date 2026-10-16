@@ -45,6 +45,28 @@ if [ -z "${MIR_SERVER_HOST_SOCKET:-}" ]; then
 fi
 echo "DIPPER-WRAP: using MIR_SERVER_HOST_SOCKET=${MIR_SERVER_HOST_SOCKET:-NONE}"
 
+# No USC (lightdm is masked on dipper): Lomiri is the sole hardware Mir
+# server. Mirror lsc-wrapper's environment, which inits Android EGL fine.
+if [ -z "${MIR_SERVER_HOST_SOCKET:-}" ]; then
+    [ -r /etc/environment ] && . /etc/environment
+    export ANDROID_ROOT
+    export LD_PRELOAD=libtls-padding.so
+    export MIR_SERVER_ENABLE_KEY_REPEAT=false
+    # Running under the user manager there is no controlling tty, so the vt
+    # provider cannot do its ioctls, and logind device handover never yields
+    # the fts touchscreen. Open evdev nodes directly (phablet is in
+    # android_input, which owns event* via 65-android.rules).
+    export MIR_SERVER_CONSOLE_PROVIDER="${MIR_SERVER_CONSOLE_PROVIDER:-none}"
+    # The generic Halium image reports ro.product.device=halium_arm64; make
+    # libdeviceinfo (here and inside Lomiri/Mir) read devices/dipper.yaml, and
+    # take the grid unit from it rather than trusting the inherited env.
+    export DEVICEINFO_DEVICE_NAME="${DEVICEINFO_DEVICE_NAME:-dipper}"
+    echo "DIPPER-WRAP: inherited GRID_UNIT_PX=${GRID_UNIT_PX:-unset} QTWEBKIT_DPR=${QTWEBKIT_DPR:-unset}"
+    gu="$(device-info get GridUnit 2>/dev/null || true)"
+    [ -n "$gu" ] && export GRID_UNIT_PX="$gu"
+    echo "DIPPER-WRAP: sole compositor, console=${MIR_SERVER_CONSOLE_PROVIDER:-auto} GRID_UNIT_PX=${GRID_UNIT_PX:-unset}"
+fi
+
 dbus-update-activation-environment --systemd MIR_SOCKET="${MIR_SERVER_FILE}"
 dbus-update-activation-environment --systemd WAYLAND_DISPLAY
 if [ -n "${MIR_SERVER_HOST_SOCKET:-}" ]; then

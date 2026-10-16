@@ -4,7 +4,7 @@ dipper:
     - Xiaomi Mi 8
   PrettyName: Xiaomi Mi 8
   DeviceType: phone
-  GridUnit: 21
+  GridUnit: 42
   WebkitDpr: 2
   PrimaryOrientation: Portrait
   # The Mir ubports:android2 server-side EGL fence sync is broken on this
