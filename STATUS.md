@@ -12,19 +12,38 @@ Last checked: 2026-10-16, branch `focal/port-bootstrap`, local build flashed to 
 | Wi-Fi | Works (connects to WPA networks). |
 | Time | NTP sync via systemd-timesyncd. |
 | Modem | Both RIL modems online and powered in ofono. Calls and SMS not yet tested. |
-| Audio | PulseAudio up with `sink.primary_output` (droid card) as default. Playback not yet tested. |
+| Audio | Playback works (PulseAudio, `sink.primary_output` on the droid card). Mic and call audio not yet tested. |
 | Bluetooth | `hci0` up. Pairing not yet tested. |
 | Sensors | Android sensors HAL runs; rotation events reach qtmir. |
 | ADB on booted system | Works (usb-moded with `extcon_tracking=0`, plus a `/userdata/.force-adb` marker). |
-| **Suspend** | **Broken**: `systemd-suspend` fails with `Device or resource busy`. |
+| Suspend | Kernel autosleep works: unplugged with the screen off the SoC reaches deep sleep (aosd/cxsd). See known issue 7 for spurious logind suspends. |
 
 ## Known issues
 
-1. Suspend fails (EBUSY); the phone never sleeps.
+1. Forced `systemd-suspend` fails with EBUSY (expected with autosleep and wakelocks; the real sleep path is autosleep).
 2. repowerd floods the log with `NoSessionForPID` for the Lomiri processes.
 3. upowerd: `energy_full_design` is 0.
 4. Failed units: `systemd-backlight@backlight:panel0-backlight`; `usb-moded-ssh` gets killed during first-boot host-key generation.
 5. usb-moded still runs with `-D` (debug).
+6. **Off-mode charging boot hangs (work in progress).** Powering up with USB
+   attached to a powered-off phone makes the bootloader pass
+   `androidboot.mode=charger` (`fastboot oem off-mode-charge 0` is accepted but
+   doesn't prevent it). Done so far: the initrd boots Ubuntu instead of
+   Android's charger root (`ramdisk-overlay/scripts/halium`); the container
+   gets a `/proc/cmdline` without the mode and `/dev/null` over
+   `/proc/sysrq-trigger` (`overlay/system/var/lib/lxc/android/config`); the
+   Android `on charger` blocks are disabled
+   (`/usr/libexec/dipper-android-charger-guard`). Still failing at last test:
+   at ~7 s a `sysrq: SysRq : Emergency Remount R/O` makes every filesystem
+   read-only and the phone sits on the Mi logo; the sysrq mask is not yet
+   tested in a charger boot. In charger mode the kernel charger driver
+   (`smb-lib.c`, `off_charge_flag`) also leaves USB data off, so no ADB.
+   Recover: Vol- + Power to fastboot, `fastboot boot` TWRP, `adb reboot`.
+   Evidence: TWRP `/sys/fs/pstore/console-ramoops-0` and
+   `/data/dipper-charger-guard.log` (debug output, to be removed).
+7. Something calls logind `Suspend` every ~30 s for the first ~3 minutes
+   after boot; each attempt fails with EBUSY and makes NetworkManager drop
+   Wi-Fi and the modems. Not repowerd (HIDL backend, its `suspend()` is a no-op).
 
 ## Build and flash
 
