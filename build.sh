@@ -21,6 +21,22 @@ apply_build_toolchain_fixes() {
     fi' "$kernel"
         sed -i.bak 's/make O="$OUT" $MAKEOPTS /make O="$OUT" $MAKEOPTS "${ARM32_MAKE_ARGS[@]}" /g' "$kernel"
     fi
+
+    # Merge ./kernel.config over the defconfig and fail if any option is lost.
+    if [ -f "$kernel" ] && ! grep -q 'kernel.config fragment' "$kernel"; then
+        sed -i.bak '/^make O=.*\$deviceinfo_kernel_defconfig$/a\
+# kernel.config fragment (added by xiaomi-dipper build.sh)\
+if [ -f "$HERE/kernel.config" ]; then\
+    sed -n "s/^CONFIG_\\([A-Za-z0-9_]*\\)=\\(.*\\)$/\\1 \\2/p" "$HERE/kernel.config" | while read -r name val; do\
+        scripts/config --file "$OUT/.config" --set-val "$name" "$val"\
+    done\
+    make O="$OUT" $MAKEOPTS "${ARM32_MAKE_ARGS[@]}" olddefconfig\
+    grep "^CONFIG_" "$HERE/kernel.config" | while read -r opt; do\
+        grep -qx "$opt" "$OUT/.config" || { echo "kernel.config: $opt not applied" >&2; exit 1; }\
+    done\
+fi' "$kernel"
+        grep -q 'kernel.config fragment' "$kernel"
+    fi
 }
 
 if [ ! -f build/build.sh ]; then
