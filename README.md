@@ -1,8 +1,9 @@
 # Ubuntu Touch device tree for Xiaomi Mi 8 (dipper)
 
-Ubuntu Touch 20.04 (Focal) port for the Xiaomi Mi 8, based on Halium 9.0 and
-the [halium_arm64 GSI build mechanism](https://github.com/ubports/porting-notes/wiki/GitLab-CI-builds-for-devices-based-on-halium_arm64-(Halium-9)),
-adapted to GitHub Actions.
+Ubuntu Touch 24.04 (Noble, `24.04-2.x`) port for the Xiaomi Mi 8, based on
+Halium 9.0 and the [halium_arm64 GSI build mechanism](https://github.com/ubports/porting-notes/wiki/GitLab-CI-builds-for-devices-based-on-halium_arm64-(Halium-9)),
+adapted to GitHub Actions. The 20.04 (Focal) port lives on the
+`focal/port-bootstrap` branch.
 
 What works, known issues and debugging notes are in [STATUS.md](STATUS.md).
 
@@ -31,7 +32,7 @@ unpack it into `out/`.
 **Local build** (Linux, rootless Podman):
 
 ```bash
-./build-in-podman.sh --flashable              # out/boot.img, recovery.img, system.img
+./build-in-podman.sh --flashable              # out/boot.img, recovery.img, rootfs.img
 ./build-mir-android2-in-podman.sh --install   # optional: rebuild the patched Mir
                                               # android platform into the overlay
                                               # (needs qemu-user-static binfmt)
@@ -43,18 +44,24 @@ The kernel config additions (`CONFIG_OVERLAY_FS`, required) live in
 
 ## Install
 
+The Noble rootfs (about 3.3 GiB with the Halium image) doesn't fit the 3 GiB
+system partition, so it lives on userdata as `/data/ubuntu.img`, the
+initramfs's "legacy" layout. The system partition is unused.
+
 From fastboot (Vol- + Power):
 
 ```bash
 fastboot flash boot out/boot.img
 fastboot flash recovery out/recovery.img
-fastboot flash system out/system.img
 fastboot format:ext4 userdata   # first install only: wipes all data
-fastboot reboot
+fastboot boot twrp-3.7.0-dipper.img   # RAM-boot TWRP, nothing is flashed
+adb push out/rootfs.img /data/ubuntu.img
+adb reboot
 ```
 
-When iterating on a running install, flashing only `system` (and `boot` for
-kernel/initramfs changes) keeps userdata.
+When iterating on a running install, pushing only `ubuntu.img` from TWRP (and
+flashing `boot` for kernel/initramfs changes) keeps the rest of userdata.
+Formatting userdata removes the OS as well.
 
 ## Notes
 

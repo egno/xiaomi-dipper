@@ -1,8 +1,29 @@
-# Port status: Ubuntu Touch 20.04 (Focal) on Xiaomi Mi 8 (dipper)
+# Port status: Ubuntu Touch 24.04 (Noble) on Xiaomi Mi 8 (dipper)
 
-Last checked: 2026-10-16, branch `focal/port-bootstrap`, local build flashed to `system`.
+Branch `noble/port-bootstrap`, release `24.04-2.x`. **Not yet booted on the
+phone.** The hardware table and known issues below are the Focal results
+(2026-10-16, `focal/port-bootstrap`) and still need re-checking on Noble.
 
-## Hardware
+## Noble port changes
+
+- Rootfs on userdata as `/data/ubuntu.img` (5120M image): the Noble rootfs
+  plus the Halium image is about 3.3 GiB and doesn't fit the 3072M system
+  partition. `systempart=` is gone from the cmdline. `ramdisk-overlay/scripts/halium`
+  is the current dynparts initramfs script (it has the `ubuntu.img` "legacy"
+  layout) plus the charger-mode change.
+- `systemd.unified_cgroup_hierarchy=0` on the cmdline: Noble's systemd
+  defaults to cgroup v2; the other Halium 9 ports on 4.x kernels do the same.
+- Mir is 1.8.3 under the `mir1` name; the patched Android platform is now
+  `lib/aarch64-linux-gnu/mir1/server-platform/graphics-android2.so.16`, built
+  from the `ubports/24.04-2.x` branch with the same two patches.
+- Notch: Noble Lomiri supports display cutouts, configured in
+  `devices/dipper.yaml` (`DisplayCutoutsCollapsed`, `CollapsedPanelHeight`).
+  This replaces the Focal `ShellScreen.qml` override.
+- `lomiri-systemd-wrapper` picks up Noble's software-rendering guard. The
+  session setup (`dipper-shell`, `dipper-lsc-shim`, masked lightdm) is
+  unchanged: everything it uses still exists on Noble.
+
+## Hardware (Focal results)
 
 | Area | State |
 |---|---|
@@ -19,7 +40,7 @@ Last checked: 2026-10-16, branch `focal/port-bootstrap`, local build flashed to 
 | Charge limit | `dipper-charge-limit.service` suspends charger input (`battery/input_suspend`) at 80% and resumes at 75%. Not yet verified on the phone. Change limits with `systemctl edit` (`Environment=CHARGE_STOP=`/`CHARGE_START=`), disable with `systemctl mask`. |
 | Suspend | Kernel autosleep works: unplugged with the screen off the SoC reaches deep sleep (aosd/cxsd). See known issue 7 for spurious logind suspends. |
 
-## Known issues
+## Known issues (Focal)
 
 1. Forced `systemd-suspend` fails with EBUSY (expected with autosleep and wakelocks; the real sleep path is autosleep).
 2. repowerd floods the log with `NoSessionForPID` for the Lomiri processes.
@@ -49,13 +70,14 @@ Last checked: 2026-10-16, branch `focal/port-bootstrap`, local build flashed to 
 ## Build and flash
 
 ```bash
-./build-in-podman.sh --flashable            # out/boot.img, recovery.img, system.img
+./build-in-podman.sh --flashable            # out/boot.img, recovery.img, rootfs.img
 ./build-mir-android2-in-podman.sh --install # patched Mir android platform into the overlay
-fastboot flash system out/system.img        # usual iteration: system only
+fastboot boot twrp-3.7.0-dipper.img          # then, from TWRP:
+adb push out/rootfs.img /data/ubuntu.img     # usual iteration: rootfs only
 ```
 
 - The UI size comes from the Mir output scale (GridUnit / 8), which needs the
-  patched `graphics-android2.so.15` (`patches/mir-android2-initial-display-policy.patch`).
+  patched `graphics-android2.so.16` (`patches/mir-android2-initial-display-policy.patch`).
   Check the `qtmir.screens: PlatformScreen ... scale:` line in the journal before
   changing GridUnit.
 - Device systemd units go in `overlay/system/lib/systemd/system` (overlay-merged,
