@@ -8,7 +8,7 @@
 # wake it. This daemon provides exactly the bits repowerd consumes:
 #
 #   com.lomiri.SystemCompositor.PowerButton   signals Press, Release
-#   com.lomiri.SystemCompositor.UserActivity  signal  UserActivity(i)
+#   com.lomiri.SystemCompositor.UserActivity  signal  Activity(i)
 #   com.lomiri.SystemCompositor.Display       TurnOn(s), TurnOff(s), ActiveOutputs (ii)
 #
 # Input is read from evdev without grabbing, so Mir still receives every event.
@@ -18,6 +18,7 @@ import glob
 import os
 import struct
 import sys
+import time
 
 from gi.repository import Gio, GLib
 
@@ -55,7 +56,7 @@ POWER_BUTTON_XML = """
 USER_ACTIVITY_XML = """
 <node>
   <interface name='com.lomiri.SystemCompositor.UserActivity'>
-    <signal name='UserActivity'><arg type='i' name='activity_type'/></signal>
+    <signal name='Activity'><arg type='i' name='activity_type'/></signal>
   </interface>
 </node>
 """
@@ -137,17 +138,20 @@ class Shim:
             os.close(fd)
             return False
         for off in range(0, len(data) - EVENT.size + 1, EVENT.size):
-            sec, usec, etype, code, value = EVENT.unpack_from(data, off)
+            _sec, _usec, etype, code, value = EVENT.unpack_from(data, off)
             if etype == EV_KEY and code == KEY_POWER:
                 if value == 1:
                     self._emit("PowerButton", "Press")
                 elif value == 0:
                     self._emit("PowerButton", "Release")
             elif etype in (EV_KEY, EV_ABS):
-                now = sec * 1_000_000 + usec
+                # Event timestamps are wall-clock and jump when the time is
+                # set at boot; a backwards jump would mute activity for good.
+                now = time.monotonic_ns() // 1000
                 if now - self.last_activity >= ACTIVITY_INTERVAL_US:
                     self.last_activity = now
-                    self._emit("UserActivity", "UserActivity",
+                    # repowerd's LscUserActivity listens for "Activity".
+                    self._emit("UserActivity", "Activity",
                                GLib.Variant("(i)", (ACTIVITY_EXTENDING,)))
         return True
 
