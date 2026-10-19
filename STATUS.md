@@ -1,10 +1,24 @@
 # Port status: Ubuntu Touch 24.04 (Noble) on Xiaomi Mi 8 (dipper)
 
 Branch `noble/port-bootstrap`, release `24.04-2.x`. First boot 2026-10-19:
-Lomiri comes up on the setup wizard, the patched Mir platform loads (output
-scale 2.625) and the panel clears the notch. Nothing else is tested yet; the
-hardware table and known issues below are the Focal results (2026-10-16,
-`focal/port-bootstrap`) and still need re-checking on Noble.
+Lomiri comes up and the setup wizard completes, the patched Mir platform
+loads (output scale 2.625) and the panel clears the notch. The hardware table
+and known issues further down are the Focal results (2026-10-16,
+`focal/port-bootstrap`); what has been re-checked on Noble is listed here.
+
+## Noble checks (2026-10-19, service state only)
+
+| Area | State |
+|---|---|
+| Display / Lomiri | Works, setup wizard completed. Notch handled by deviceinfo cutouts. |
+| Wi-Fi | Connected (`wlan0`); NTP synchronised. |
+| Modem | Both RIL modems online and powered in ofono. Calls/SMS not tested. |
+| Audio | `sink.primary_output` on the droid card is the default sink. Playback not tested. |
+| Bluetooth | `hci0` up, powered. Pairing not tested. |
+| Sensors | `sensorfwd` active. |
+| Charge limit | Seen working: charger input suspended at 76% after reaching 80%. |
+| ADB | Works with Developer Mode on. Dropped to `offline` once after the wizard; a cable replug fixed it. |
+| Failed units | `fpc-key-disable` (this phone has the Goodix sensor, so the FPC helper exits and restart-loops), `logrotate`, `dpkg-db-backup` (stock image: no `/var/log/syslog`, read-only rootfs). |
 
 ## Noble first-boot notes
 
