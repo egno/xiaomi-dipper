@@ -2,3 +2,4 @@ out/
 workdir/
 build/
 ota/
+.claude/settings.local.json
