@@ -57,7 +57,10 @@ if [ -z "${MIR_SERVER_HOST_SOCKET:-}" ]; then
     [ -r /etc/environment ] && . /etc/environment
     export ANDROID_ROOT
     export LD_PRELOAD=libtls-padding.so
-    export MIR_SERVER_ENABLE_KEY_REPEAT=false
+    # Not lsc-wrapper's MIR_SERVER_ENABLE_KEY_REPEAT=false: that is for the
+    # system compositor under a nested Lomiri. As the only Mir server, Lomiri
+    # needs the repeats; the power-key long press (power dialog) and held
+    # volume keys are detected from them.
     # Running under the user manager there is no controlling tty, so the vt
     # provider cannot do its ioctls, and logind device handover never yields
     # the fts touchscreen. Open evdev nodes directly (phablet is in
