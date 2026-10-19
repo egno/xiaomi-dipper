@@ -10,14 +10,14 @@ and known issues further down are the Focal results (2026-10-16,
 
 | Area | State |
 |---|---|
-| Display / Lomiri | Works, setup wizard completed. Notch handled by deviceinfo cutouts. |
+| Display / Lomiri | Works, setup wizard completed. Notch handled by deviceinfo cutouts (narrow corner rects so the clock fits right of the notch); in landscape `PanelBar.qml` insets the panel row 40 px from the rounded corners. 24-hour clock: `gsettings set org.ayatana.indicator.datetime time-format '24-hour'`. |
 | Wi-Fi | Connected (`wlan0`); NTP synchronised. |
 | Modem | Both RIL modems online and powered in ofono. Calls/SMS not tested. |
 | Audio | `sink.primary_output` on the droid card is the default sink. Playback not tested. |
 | Bluetooth | `hci0` up, powered. Pairing not tested. |
 | Sensors | `sensorfwd` active. |
-| Charge limit | Seen working: charger input suspended at 76% after reaching 80%. |
-| ADB | Works with Developer Mode on. Dropped to `offline` once after the wizard; a cable replug fixed it. |
+| Charge limit | Noble has no built-in limit (no settings option; upower 1.90.3 predates charge thresholds; the 4.9 charger has no `charge_control_end_threshold`). `dipper-charge-limit` now stops charging with `battery/charge_control_limit` at its max (driver votes charging off, USB input stays up): tested stop/resume with ADB connected throughout. The old `input_suspend` method dropped USB (ADB/MTP) on every toggle until a replug. |
+| ADB | Works with Developer Mode on. Earlier drop-outs came from the charge limiter toggling `input_suspend`. Host side: usb-moded uses pid.codes IDs (`1209:0002/0003/0004`), which the stock `51-android.rules` doesn't know, so without a local udev rule (`GROUP="adbusers"`) the node only gets the active seat's ACL. |
 | Failed units | `fpc-key-disable` (this phone has the Goodix sensor, so the FPC helper exits and restart-loops), `logrotate`, `dpkg-db-backup` (stock image: no `/var/log/syslog`, read-only rootfs). |
 
 ## Noble first-boot notes
