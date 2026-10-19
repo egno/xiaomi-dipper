@@ -16,6 +16,7 @@ Last checked: 2026-10-16, branch `focal/port-bootstrap`, local build flashed to 
 | Bluetooth | `hci0` up. Pairing not yet tested. |
 | Sensors | Android sensors HAL runs; rotation events reach qtmir. |
 | ADB on booted system | Works (usb-moded with `extcon_tracking=0`, plus a `/userdata/.force-adb` marker). |
+| Charge limit | `dipper-charge-limit.service` suspends charger input (`battery/input_suspend`) at 80% and resumes at 75%. Not yet verified on the phone. Change limits with `systemctl edit` (`Environment=CHARGE_STOP=`/`CHARGE_START=`), disable with `systemctl mask`. |
 | Suspend | Kernel autosleep works: unplugged with the screen off the SoC reaches deep sleep (aosd/cxsd). See known issue 7 for spurious logind suspends. |
 
 ## Known issues
