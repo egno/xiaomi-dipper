@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, focal/port-bootstrap ]
+    branches: [ main, focal/port-bootstrap, noble/port-bootstrap ]
   pull_request:
-    branches: [ main, focal/port-bootstrap ]
+    branches: [ main, focal/port-bootstrap, noble/port-bootstrap ]
   repository_dispatch:
     types: [ kernel-update ]
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
           name: artifact
           path: out
 
-      - name: Build focal flashable images
+      - name: Build flashable images
         run: |
           sudo apt update
           sudo apt install -y img2simg jq sudo wget xz-utils
@@ -63,5 +63,5 @@ jobs:
           name: OTA images
           path: |
             out/boot.img
-            out/system.img
+            out/rootfs.img
             out/recovery.img

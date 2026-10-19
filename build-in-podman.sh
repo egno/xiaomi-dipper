@@ -14,7 +14,7 @@ Usage: build-in-podman.sh [--flashable] [--flashable-only]
 
 Build dipper device images inside Podman (Ubuntu 22.04).
 
-  --flashable       Also build boot.img, recovery.img, and system.img via prepare-fake-ota
+  --flashable       Also build boot.img, recovery.img, and rootfs.img via prepare-fake-ota
   --flashable-only  Skip the device tarball build, reuse out/device_<codename>.tar.xz
 
 Everything runs rootless. Without loop devices, system-image-from-ota.sh falls
