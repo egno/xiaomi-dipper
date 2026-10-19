@@ -4,7 +4,10 @@ Description=Dipper Lomiri session (phablet, single hardware Mir compositor)
 # Instead autologin phablet into a logind seat session on tty1, the way
 # lightdm-autologin would, and let dipper-shell start the stock
 # ubuntu-touch-session.target (Lomiri + indicators) in the user manager.
-After=mount-android.service lxc-android-config.service systemd-user-sessions.service systemd-logind.service multi-user.target
+# Not After=multi-user.target (stock lightdm isn't either): on a fresh install
+# the RTC reads 1970, snapd's first seeding fails and snapd.seeded never
+# finishes, which would keep the UI from ever starting.
+After=mount-android.service lxc-android-config.service systemd-user-sessions.service systemd-logind.service
 Wants=mount-android.service
 Conflicts=getty@tty1.service
 
