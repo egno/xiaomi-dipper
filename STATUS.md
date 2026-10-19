@@ -1,8 +1,24 @@
 # Port status: Ubuntu Touch 24.04 (Noble) on Xiaomi Mi 8 (dipper)
 
-Branch `noble/port-bootstrap`, release `24.04-2.x`. **Not yet booted on the
-phone.** The hardware table and known issues below are the Focal results
-(2026-10-16, `focal/port-bootstrap`) and still need re-checking on Noble.
+Branch `noble/port-bootstrap`, release `24.04-2.x`. First boot 2026-10-19:
+Lomiri comes up on the setup wizard, the patched Mir platform loads (output
+scale 2.625) and the panel clears the notch. Nothing else is tested yet; the
+hardware table and known issues below are the Focal results (2026-10-16,
+`focal/port-bootstrap`) and still need re-checking on Noble.
+
+## Noble first-boot notes
+
+- Format userdata from TWRP (`twrp format data`), not `fastboot format:ext4
+  userdata`: the host's e2fsprogs 1.47 adds `orphan_file`, which the
+  initramfs's e2fsck 1.43.4 (run on every boot) and the 4.9 kernel don't
+  know. That filesystem was destroyed after the first shutdown.
+- `adb shell` runs as phablet; `sudo` takes the password `phablet`. ADB needs
+  the `/userdata/.force-adb` marker after a fresh format.
+- On a fresh install the RTC reads 1970 until timekeeper has a saved offset,
+  so snapd's first seeding fails and `snapd.seeded` hangs, keeping
+  `multi-user.target` from finishing. `systemctl restart snapd` once the
+  clock is sane fixes it. `dipper-shell` no longer waits for
+  `multi-user.target`, so the UI starts regardless.
 
 ## Noble port changes
 

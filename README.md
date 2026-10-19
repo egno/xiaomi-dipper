@@ -53,11 +53,18 @@ From fastboot (Vol- + Power):
 ```bash
 fastboot flash boot out/boot.img
 fastboot flash recovery out/recovery.img
-fastboot format:ext4 userdata   # first install only: wipes all data
 fastboot boot twrp-3.7.0-dipper.img   # RAM-boot TWRP, nothing is flashed
+adb shell twrp format data            # first install only: wipes all data
 adb push out/rootfs.img /data/ubuntu.img
+adb shell touch /data/.force-adb      # ADB on the booted system
 adb reboot
 ```
+
+Format userdata from TWRP, not with `fastboot format:ext4 userdata`: a recent
+host e2fsprogs (1.47+) adds the `orphan_file` feature, which the 4.9 kernel
+and the initramfs's e2fsck 1.43 don't support, and the filesystem gets
+corrupted. After `twrp format data` the phone may drop out of TWRP; get back
+to it the same way (Vol- + Power, `fastboot boot`) before pushing.
 
 When iterating on a running install, pushing only `ubuntu.img` from TWRP (and
 flashing `boot` for kernel/initramfs changes) keeps the rest of userdata.
