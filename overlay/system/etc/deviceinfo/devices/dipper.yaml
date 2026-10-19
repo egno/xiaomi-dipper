@@ -7,15 +7,17 @@ dipper:
   GridUnit: 21
   WebkitDpr: 2
   PrimaryOrientation: Portrait
-  # Notch (560x89 px, centred) and the 96 px rounded top corners, from the
-  # vendor DevicesAndroidOverlay, as "x y width height" in panel pixels.
-  # Lomiri keeps indicators out of these in portrait; the collapsed panel is
-  # made as tall as the notch so it lines up with it.
+  # Notch (560x89 px, centred, from the vendor DevicesAndroidOverlay) and the
+  # rounded top corners, as "x y width height" in panel pixels. Lomiri keeps
+  # indicators out of these in portrait; the collapsed panel is made as tall
+  # as the notch so it lines up with it. The corners have a 96 px radius but
+  # only reach ~25 px in at the height of the panel text, so the corner
+  # rects are narrow; full-width ones squeezed the clock off the right side.
   CollapsedPanelHeight: 89
   DisplayCutoutsCollapsed:
-    - 0 0 96 89
+    - 0 0 28 89
     - 260 0 560 89
-    - 984 0 96 89
+    - 1052 0 28 89
   # The Mir ubports:android2 server-side EGL fence sync is broken on this
   # sdm845/Adreno 630 stack: the system compositor renders, but Lomiri clients
   # fail "could not select EGL config" -> the greeter respawn-loops (screen
